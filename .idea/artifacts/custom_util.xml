@@ -1,0 +1,18 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="custom-util">
+    <output-path>$PROJECT_DIR$/out/artifacts</output-path>
+    <root id="archive" name="custom-util.jar">
+      <element id="directory" name="com">
+        <element id="directory" name="custom">
+          <element id="directory" name="scripts">
+            <element id="directory" name="util">
+              <element id="directory" name="v2">
+                <element id="dir-copy" path="$PROJECT_DIR$/src/com/custom/scripts/util/v2" />
+              </element>
+            </element>
+          </element>
+        </element>
+      </element>
+    </root>
+  </artifact>
+</component>
