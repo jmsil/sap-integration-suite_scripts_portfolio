@@ -5,7 +5,7 @@ import com.sap.it.script.v2.api.Message
 
 static Message parseQuery(Message message) {
     String query = message.getHeader('CamelHttpQuery', String)
-    Map<String, String> queryMap = ImportedHttpUtil.parseQueryMap(query)
-    message.setProperties(queryMap)
+    message.setHeader('CamelHttpQuery', null)
+    message.setProperties(ImportedHttpUtil.parseQueryToMap(query))
     return message
 }

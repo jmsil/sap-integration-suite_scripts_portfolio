@@ -29,6 +29,9 @@ class ProxyRequestSettings {
         'conversions-ftp': new RouteSettings(
             methods: ['POST']
         ),
+        'firebase-users-management': new RouteSettings(
+            methods: ['POST', 'PATCH', 'DELETE']
+        ),
         'inter-statement-oauth2-mtls': new RouteSettings(
             methods: ['GET'],
             query: [
@@ -84,7 +87,7 @@ class ProxyRequestSettings {
 
         String query = message.getHeader('CamelHttpQuery', String)
         List<String> querySettings = settings.query ?: []
-        List<String> queryRequest = HttpUtil.parseQueryList(query)
+        List<String> queryRequest = HttpUtil.parseQueryToList(query)
 
         if (querySettings.size() != queryRequest.size()) {
             HttpUtil.setBadRequestResponse(message, 'Wrong number of query parameters.')

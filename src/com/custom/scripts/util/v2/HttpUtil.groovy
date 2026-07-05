@@ -5,16 +5,16 @@ import com.sap.it.script.v2.api.Message
 import java.nio.charset.Charset
 
 class HttpUtil {
-    static Map<String, String> parseQueryMap(String query) {
-        List<String> list = parseQueryList(query)
+    static Map<String, String> parseQueryToMap(String query) {
+        List<String> list = parseQueryToList(query)
         return list.collectEntries {
             String it -> it.tokenize('=')
         }
     }
 
-    static List<String> parseQueryList(String query) {
+    static List<String> parseQueryToList(String query) {
         query ?= ''
-        query = URLDecoder.decode(query, Charset.defaultCharset())
+        query = urlDecode(query)
         query = query.replace('\$', '')
         return query.tokenize('&')
     }
@@ -40,5 +40,44 @@ class HttpUtil {
         message.setHeader('CamelHttpResponseCode', code)
         message.setHeader('Content-Type', contentType)
         message.setBody(body)
+    }
+
+    static void setAuthorizationHeader(Message message, Map<String, Object> token) {
+        setAuthorizationHeader(
+            message,
+            token?['token_type'] as String,
+            token?['access_token'] as String
+        )
+    }
+
+    static void setAuthorizationHeader(Message message, String type, String token) {
+        message.setHeader(
+            'Authorization',
+            type && token ? "${type} ${token}" : null
+        )
+    }
+
+    static void setJsonRequest(Message message, Map<String, Object> body) {
+        message.setHeader('Content-Type', 'application/json')
+        message.setBody(JsonUtil.mapToJson(body))
+    }
+
+    static void setFormUrlEncodedRequest(Message message, Map<String, String> body) {
+        List<String> list = []
+        body.each { String key, String value -> {
+            key = urlEncode(key)
+            value = urlEncode(value)
+            list.add("${key}=${value}")
+        }}
+        message.setHeader('Content-Type', 'application/x-www-form-urlencoded')
+        message.setBody(list.join('&'))
+    }
+
+    static private String urlEncode(String value) {
+        return URLEncoder.encode(value, Charset.defaultCharset())
+    }
+
+    static private String urlDecode(String value) {
+        return URLDecoder.decode(value, Charset.defaultCharset())
     }
 }
