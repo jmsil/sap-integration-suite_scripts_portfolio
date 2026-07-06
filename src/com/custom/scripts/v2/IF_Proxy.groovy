@@ -29,7 +29,10 @@ class ProxyRequestSettings {
         'conversions-ftp': new RouteSettings(
             methods: ['POST']
         ),
-        'firebase-users-management': new RouteSettings(
+        'firebase-users-management-sync': new RouteSettings(
+            methods: ['POST', 'PATCH', 'DELETE']
+        ),
+        'firebase-users-management-async': new RouteSettings(
             methods: ['POST', 'PATCH', 'DELETE']
         ),
         'inter-statement-oauth2-mtls': new RouteSettings(

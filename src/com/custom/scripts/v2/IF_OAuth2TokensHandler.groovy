@@ -3,8 +3,8 @@ package com.custom.scripts.v2
 import com.custom.scripts.util.v2.HttpUtil
 import com.custom.scripts.util.v2.JsonUtil
 import com.custom.scripts.util.v2.SecurityUtil
-import com.custom.scripts.util.v2.SecurityUtil.OAuth2ClientCredentials
 import com.sap.it.script.v2.api.Message
+import groovy.transform.Field
 
 import java.security.KeyFactory
 import java.security.PrivateKey
@@ -12,31 +12,42 @@ import java.security.Signature
 import java.security.spec.PKCS8EncodedKeySpec
 import java.time.LocalDateTime
 
+import static com.custom.scripts.util.v2.MessageUtil.MessageHeader
+import static com.custom.scripts.util.v2.SecurityUtil.OAuth2ClientCredentials
+
+@Field
+static final MessageHeader firebaseProjectId = new MessageHeader('_firebase-project-id')
+
 static Message setCachedAuthorization(Message message) {
     String cache = message.getBody(String)
 
-    if (!cache) {
-        HttpUtil.setAuthorizationHeader(message, null)
+    if (!cache)
         return message
-    }
 
     Map<String, Object> token = JsonUtil.jsonToMap(cache)
     int expiresInSeconds = token['expires_in'] as Integer
     expiresInSeconds -= Math.min(expiresInSeconds.intdiv(10) as Integer, 120)
-    LocalDateTime createdIn = LocalDateTime.parse(token['created_in'].toString())
+    LocalDateTime createdIn = LocalDateTime.parse(token['created_in'] as String)
     LocalDateTime expiresIn = createdIn.plusSeconds(expiresInSeconds)
 
     if (LocalDateTime.now() <= expiresIn)
         HttpUtil.setAuthorizationHeader(message, token)
 
+    firebaseProjectId.set(message, token['project_id'])
     return message
 }
 
 static Message setNewAuthorization(Message message) {
     Map<String, Object> token = JsonUtil.jsonToMap(message.getBody(String))
+    String projectId = firebaseProjectId.get(message)
+
+    if (projectId)
+        token['project_id'] = projectId
+
     token['created_in'] = LocalDateTime.now().toString()
     message.setBody(JsonUtil.mapToJson(token))
     HttpUtil.setAuthorizationHeader(message, token)
+
     return message
 }
 
@@ -102,6 +113,7 @@ static private void setRequestFromFirebaseServiceKey(Message message) {
     ]
 
     setConnectionAddress(message, key['token_uri'])
+    firebaseProjectId.set(message, key['project_id'])
     HttpUtil.setFormUrlEncodedRequest(message, requestBody)
 }
 

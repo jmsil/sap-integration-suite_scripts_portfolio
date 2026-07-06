@@ -45,8 +45,8 @@ class HttpUtil {
     static void setAuthorizationHeader(Message message, Map<String, Object> token) {
         setAuthorizationHeader(
             message,
-            token?['token_type'] as String,
-            token?['access_token'] as String
+            token['token_type'] as String,
+            token['access_token'] as String
         )
     }
 
