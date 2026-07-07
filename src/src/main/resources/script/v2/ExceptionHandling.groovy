@@ -40,36 +40,22 @@ static Message processData(Message message) {
 }
 
 static private void handleSoapFault(Message message, SoapFault exception) {
-    int exceptionStatusCode = exception.getStatusCode()
+    int statusCode = exception.getStatusCode()
 
-    if (exceptionStatusCode != 500)
+    if (statusCode != 500)
         throw new InternalCustomException(exception)
 
-    Http.setResponse(message, exceptionStatusCode, 'text/plain', exception.getMessage())
+    Http.setResponse(message, statusCode, Header.CONTENT_TYPE.get(message), exception.getMessage())
 }
 
 static private void handleHttpOperationFailed(
     Message message, HttpOperationFailedException exception)
 {
-    int exceptionStatusCode = exception.getStatusCode()
+    int statusCode = exception.getStatusCode()
 
-    if (exceptionStatusCode != 400)
+    if (statusCode != 400)
         throw new InternalCustomException(exception)
 
-    String responseBody = null
-    String exceptionContentType = Header.CONTENT_TYPE.get(message)
-    String exceptionMessage = exception.getMessage()
-    String exceptionResponseBody = exception.getResponseBody()
-
-    try {
-        Map<String, Object> exceptionMap = Json.jsonToMap(exceptionResponseBody)
-        exceptionMap['SAP_ExceptionMessage'] = exceptionMessage
-        responseBody = Json.mapToJson(exceptionMap)
-    }
-    catch (ignored) {
-        responseBody ?= "HTTP response: ${exceptionResponseBody}\n\n" +
-            "Exception message: ${exceptionMessage}"
-    }
-
-    Http.setResponse(message, exceptionStatusCode, exceptionContentType, responseBody)
+    Http.setResponse(
+        message, statusCode, Header.CONTENT_TYPE.get(message), exception.getResponseBody())
 }
