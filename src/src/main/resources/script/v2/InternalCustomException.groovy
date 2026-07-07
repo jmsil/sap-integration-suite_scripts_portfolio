@@ -1,4 +1,4 @@
-package com.custom.scripts.util.v2
+package src.main.resources.script.v2
 
 class InternalCustomException extends Exception {
     InternalCustomException(Throwable cause) {

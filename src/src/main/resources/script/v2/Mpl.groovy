@@ -1,11 +1,11 @@
-package com.custom.scripts.v2
+package src.main.resources.script.v2
 
 import com.sap.it.api.msglog.MessageLog
 import com.sap.it.api.msglog.MessageLogFactory
 import com.sap.it.script.v2.api.Message
 
 Message logQuery(Message message) {
-    String query = message.getHeader('CamelHttpQuery', String)
+    String query = Header.CAMEL_HTTP_QUERY.get(message)
     logData(message, 'Query', query)
     return message
 }

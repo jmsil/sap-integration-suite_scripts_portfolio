@@ -1,8 +1,5 @@
-package com.custom.scripts.v2
+package src.main.resources.script.v2
 
-import com.custom.scripts.util.v2.HttpUtil
-import com.custom.scripts.util.v2.JsonUtil
-import com.custom.scripts.util.v2.SecurityUtil
 import com.sap.it.script.v2.api.Message
 import groovy.transform.Field
 
@@ -12,11 +9,16 @@ import java.security.Signature
 import java.security.spec.PKCS8EncodedKeySpec
 import java.time.LocalDateTime
 
-import static com.custom.scripts.util.v2.MessageUtil.MessageHeader
-import static com.custom.scripts.util.v2.SecurityUtil.OAuth2ClientCredentials
-
 @Field
-static final MessageHeader firebaseProjectId = new MessageHeader('_firebase-project-id')
+static final private Header FIREBASE_PROJECT_ID = new Header('_firebase-project-id')
+@Field
+static final private Header ARTIFACT_ALIAS = new Header('_oauth2-tokens-handler-artifact-alias')
+@Field
+static final private Property ROUTE = new Property('_route')
+@Field
+static final private Property CONNECTION_ADDRESS = new Property('_connection-address')
+@Field
+static final private Property CONNECTION_QUERY = new Property('_connection-query')
 
 static Message setCachedAuthorization(Message message) {
     String cache = message.getBody(String)
@@ -24,35 +26,35 @@ static Message setCachedAuthorization(Message message) {
     if (!cache)
         return message
 
-    Map<String, Object> token = JsonUtil.jsonToMap(cache)
+    Map<String, Object> token = Json.jsonToMap(cache)
     int expiresInSeconds = token['expires_in'] as Integer
     expiresInSeconds -= Math.min(expiresInSeconds.intdiv(10) as Integer, 120)
     LocalDateTime createdIn = LocalDateTime.parse(token['created_in'] as String)
     LocalDateTime expiresIn = createdIn.plusSeconds(expiresInSeconds)
 
     if (LocalDateTime.now() <= expiresIn)
-        HttpUtil.setAuthorizationHeader(message, token)
+        Http.setAuthorizationHeader(message, token)
 
-    firebaseProjectId.set(message, token['project_id'])
+    FIREBASE_PROJECT_ID.set(message, token['project_id'])
     return message
 }
 
 static Message setNewAuthorization(Message message) {
-    Map<String, Object> token = JsonUtil.jsonToMap(message.getBody(String))
-    String projectId = firebaseProjectId.get(message)
+    Map<String, Object> token = Json.jsonToMap(message.getBody(String))
+    String projectId = FIREBASE_PROJECT_ID.get(message)
 
     if (projectId)
         token['project_id'] = projectId
 
     token['created_in'] = LocalDateTime.now().toString()
-    message.setBody(JsonUtil.mapToJson(token))
-    HttpUtil.setAuthorizationHeader(message, token)
+    message.setBody(Json.mapToJson(token))
+    Http.setAuthorizationHeader(message, token)
 
     return message
 }
 
 static Message setRequest(Message message) {
-    switch (message.getProperty('_route')) {
+    switch (ROUTE.get(message)) {
         case 'cc-mtls' -> setRequestFromClientCredentials(message)
         case 'fb-skey' -> setRequestFromFirebaseServiceKey(message)
     }
@@ -60,16 +62,16 @@ static Message setRequest(Message message) {
 }
 
 static private void setRequestFromClientCredentials(Message message) {
-    OAuth2ClientCredentials credentials = SecurityUtil.getOAuth2ClientCredentials(
-        getArtifactAlias(message))
-    setConnectionAddress(message, credentials.serviceUrl)
+    OAuth2ClientCredentials credentials = Security.getOAuth2ClientCredentials(
+        ARTIFACT_ALIAS.get(message))
+    CONNECTION_ADDRESS.set(message, credentials.serviceUrl)
     Map<String, String> requestBody = ['scope': credentials.scope]
 
     switch (credentials.sendAuthenticationAs) {
         case 'header' -> {
             String authentication = credentials.clientId + ':' + credentials.clientSecret
             authentication = encodeBase64(authentication)
-            HttpUtil.setAuthorizationHeader(message, 'Basic', authentication)
+            Http.setAuthorizationHeader(message, 'Basic', authentication)
         }
         case 'body' -> {
             requestBody['client_id'] = credentials.clientId
@@ -79,19 +81,19 @@ static private void setRequestFromClientCredentials(Message message) {
 
     switch (credentials.sendGrantTypeAs) {
         case 'partOfBody'-> requestBody['grant_type'] = 'client_credentials'
-        case 'partOfURL' -> setConnectionQuery(message, 'grant_type=client_credentials')
+        case 'partOfURL' -> CONNECTION_QUERY.set(message, 'grant_type=client_credentials')
     }
 
     switch (credentials.contentType) {
-        case 'json' -> HttpUtil.setJsonRequest(message, requestBody)
-        case 'urlencoded' -> HttpUtil.setFormUrlEncodedRequest(message, requestBody)
+        case 'json' -> Http.setJsonRequest(message, requestBody)
+        case 'urlencoded' -> Http.setFormUrlEncodedRequest(message, requestBody)
     }
 }
 
 static private void setRequestFromFirebaseServiceKey(Message message) {
     long nowSeconds = System.currentTimeMillis().intdiv(1000)
-    String secureParameter = SecurityUtil.getSecureParameter(getArtifactAlias(message))
-    Map<String, String> key = JsonUtil.jsonToMap(secureParameter) as Map<String, String>
+    String secureParameter = Security.getSecureParameter(ARTIFACT_ALIAS.get(message))
+    Map<String, String> key = Json.jsonToMap(secureParameter) as Map<String, String>
 
     Map<String, String> header = [
         'alg': 'RS256',
@@ -112,16 +114,16 @@ static private void setRequestFromFirebaseServiceKey(Message message) {
         'assertion': getSignedJwt(header, payload, key['private_key'])
     ]
 
-    setConnectionAddress(message, key['token_uri'])
-    firebaseProjectId.set(message, key['project_id'])
-    HttpUtil.setFormUrlEncodedRequest(message, requestBody)
+    CONNECTION_ADDRESS.set(message, key['token_uri'])
+    FIREBASE_PROJECT_ID.set(message, key['project_id'])
+    Http.setFormUrlEncodedRequest(message, requestBody)
 }
 
 static private String getSignedJwt(
     Map<String, Object> header, Map<String, Object> payload, String key)
 {
-    String jwtHeader = encodeBase64(JsonUtil.mapToJson(header))
-    String jwtPayload = encodeBase64(JsonUtil.mapToJson(payload))
+    String jwtHeader = encodeBase64(Json.mapToJson(header))
+    String jwtPayload = encodeBase64(Json.mapToJson(payload))
     String jwt = jwtHeader + '.' + jwtPayload
 
     KeyFactory keyFactory = KeyFactory.getInstance('RSA')
@@ -138,16 +140,4 @@ static private String getSignedJwt(
 
 static private String encodeBase64(String text) {
     return text.getBytes().encodeBase64().toString()
-}
-
-static private void setConnectionAddress(Message message, String address) {
-    message.setProperty('_connection-address', address)
-}
-
-static private void setConnectionQuery(Message message, String query) {
-    message.setProperty('_connection-query', query)
-}
-
-static private String getArtifactAlias(Message message) {
-    return message.getHeader('_oauth2-tokens-handler-artifact-alias', String)
 }
