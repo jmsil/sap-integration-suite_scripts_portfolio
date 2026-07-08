@@ -47,16 +47,18 @@ static Message setNewAuthorization(Message message) {
         token['project_id'] = projectId
 
     token['created_in'] = LocalDateTime.now().toString()
-    message.setBody(Json.mapToJson(token))
     Http.setAuthorizationHeader(message, token)
+    message.setBody(Json.mapToJson(token))
 
     return message
 }
 
 static Message setRequest(Message message) {
     switch (ROUTE.get(message)) {
-        case 'cc-mtls' -> setRequestFromClientCredentials(message)
-        case 'fb-skey' -> setRequestFromFirebaseServiceKey(message)
+        case 'cc-mtls' ->
+            setRequestFromClientCredentials(message)
+        case 'fb-skey' ->
+            setRequestFromFirebaseServiceKey(message)
     }
     return message
 }
@@ -80,13 +82,17 @@ static private void setRequestFromClientCredentials(Message message) {
     }
 
     switch (credentials.sendGrantTypeAs) {
-        case 'partOfBody'-> requestBody['grant_type'] = 'client_credentials'
-        case 'partOfURL' -> CONNECTION_QUERY.set(message, 'grant_type=client_credentials')
+        case 'partOfBody'->
+            requestBody['grant_type'] = 'client_credentials'
+        case 'partOfURL' ->
+            CONNECTION_QUERY.set(message, 'grant_type=client_credentials')
     }
 
     switch (credentials.contentType) {
-        case 'json' -> Http.setJsonRequest(message, requestBody)
-        case 'urlencoded' -> Http.setFormUrlEncodedRequest(message, requestBody)
+        case 'json' ->
+            Http.setJsonRequest(message, requestBody)
+        case 'urlencoded' ->
+            Http.setFormUrlEncodedRequest(message, requestBody)
     }
 }
 
@@ -122,9 +128,7 @@ static private void setRequestFromFirebaseServiceKey(Message message) {
 static private String getSignedJwt(
     Map<String, Object> header, Map<String, Object> payload, String key)
 {
-    String jwtHeader = encodeBase64(Json.mapToJson(header))
-    String jwtPayload = encodeBase64(Json.mapToJson(payload))
-    String jwt = jwtHeader + '.' + jwtPayload
+    String jwt = encodeBase64(Json.mapToJson(header)) + '.' + encodeBase64(Json.mapToJson(payload))
 
     KeyFactory keyFactory = KeyFactory.getInstance('RSA')
     PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(key.getBytes())
