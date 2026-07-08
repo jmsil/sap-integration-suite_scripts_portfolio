@@ -7,8 +7,8 @@ import groovy.transform.Immutable
 @Field
 static final private Property RESOURCE = new Property('_resource')
 @Field
-static final private Map<String, ProxyRouteSettings> ROUTES = [
-    'calculator': new ProxyRouteSettings(
+static final private Map<String, RouteSettings> ROUTES = [
+    'calculator': new RouteSettings(
         methods: ['GET'],
         paths: ['add', 'sub', 'mul', 'div'],
         query: [
@@ -16,23 +16,23 @@ static final private Map<String, ProxyRouteSettings> ROUTES = [
             /paramB=[0-9]+/
         ]
     ),
-    'conversions-ftp': new ProxyRouteSettings(
+    'conversions-ftp': new RouteSettings(
         methods: ['POST']
     ),
-    'firebase-users-management-sync': new ProxyRouteSettings(
+    'firebase-users-management-sync': new RouteSettings(
         methods: ['POST', 'PATCH', 'DELETE']
     ),
-    'firebase-users-management-async': new ProxyRouteSettings(
+    'firebase-users-management-async': new RouteSettings(
         methods: ['POST', 'PATCH', 'DELETE']
     ),
-    'inter-statement-oauth2-mtls': new ProxyRouteSettings(
+    'inter-statement-oauth2-mtls': new RouteSettings(
         methods: ['GET'],
         query: [
             /start-date=[0-9]{4}-[0-9]{2}-[0-9]{2}/,
             /end-date=[0-9]{4}-[0-9]{2}-[0-9]{2}/
         ]
     ),
-    'sql-server-xslt': new ProxyRouteSettings(
+    'sql-server-xslt': new RouteSettings(
         methods: ['GET', 'POST', 'PATCH']
     )
 ]
@@ -62,8 +62,7 @@ private static void setResourceAndPath(Message message) {
 }
 
 static private void validateSettings(Message message) {
-    String resource = RESOURCE.get(message)
-    ProxyRouteSettings settings = ROUTES[resource]
+    RouteSettings settings = ROUTES[RESOURCE.get(message)]
 
     if (settings == null || !isValid(message, Header.CAMEL_HTTP_PATH, settings.paths)) {
         Http.setNotFoundResponse(message)
@@ -110,7 +109,7 @@ static private boolean isValid(Message message, Header header, List<String> sett
 }
 
 @Immutable
-class ProxyRouteSettings {
+class RouteSettings {
     final List<String> methods
     final List<String> paths
     final List<String> query
