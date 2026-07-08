@@ -12,15 +12,15 @@ class Header {
     static final Header CAMEL_HTTP_METHOD = new Header('CamelHttpMethod')
     static final Header CAMEL_HTTP_RESPONSE_CODE = new Header('CamelHttpResponseCode')
 
-    final String header
+    final String name
 
-    Header(String header) { this.header = header }
+    Header(String name) { this.name = name }
 
     <T> T get(Message message) {
-        return message.getHeader(header) as T
+        return message.getHeader(name) as T
     }
 
     void set(Message message, Object value) {
-        message.setHeader(header, value)
+        message.setHeader(name, value)
     }
 }

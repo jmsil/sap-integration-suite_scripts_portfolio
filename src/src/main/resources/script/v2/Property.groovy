@@ -5,15 +5,15 @@ import com.sap.it.script.v2.api.Message
 class Property {
     static final Property CAMEL_EXCEPTION_CAUGHT = new Property('CamelExceptionCaught')
 
-    final String property
+    final String name
 
-    Property(String property) { this.property = property }
+    Property(String name) { this.name = name }
 
     <T> T get(Message message) {
-        return message.getProperty(property) as T
+        return message.getProperty(name) as T
     }
 
     void set(Message message, Object value) {
-        message.setProperty(property, value)
+        message.setProperty(name, value)
     }
 }
