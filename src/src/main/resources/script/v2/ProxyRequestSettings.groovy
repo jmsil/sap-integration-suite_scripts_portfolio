@@ -5,6 +5,8 @@ import groovy.transform.Field
 import groovy.transform.Immutable
 
 @Field
+static final private Property PUBLIC_PATH = new Property('_public-path')
+@Field
 static final private Property RESOURCE = new Property('_resource')
 @Field
 static final private Map<String, RouteSettings> ROUTES = [
@@ -20,10 +22,12 @@ static final private Map<String, RouteSettings> ROUTES = [
         methods: ['POST']
     ),
     'firebase-users-management-sync': new RouteSettings(
-        methods: ['POST', 'PATCH', 'DELETE']
+        methods: ['POST', 'PATCH', 'DELETE'],
+        rejectPublicCall: true
     ),
     'firebase-users-management-async': new RouteSettings(
-        methods: ['POST', 'PATCH', 'DELETE']
+        methods: ['POST', 'PATCH', 'DELETE'],
+        rejectPublicCall: true
     ),
     'inter-statement-oauth2-mtls': new RouteSettings(
         methods: ['GET'],
@@ -38,33 +42,38 @@ static final private Map<String, RouteSettings> ROUTES = [
 ]
 
 static Message processData(Message message) {
-    setResourceAndPath(message)
-    validateSettings(message)
-    return message
-}
-
-private static void setResourceAndPath(Message message) {
     String resource
-    String path = Header.CAMEL_HTTP_PATH.get(message)
-    int slashPos = path.indexOf('/')
+    String publicPath = PUBLIC_PATH.get(message)
+    String camelHttpPath = Header.CAMEL_HTTP_PATH.get(message)
+    boolean isPublicCall = camelHttpPath.startsWith(publicPath)
+    camelHttpPath = camelHttpPath.replace(publicPath, '')
+    int slashPos = camelHttpPath.indexOf('/')
 
     if (slashPos == -1) {
-        resource = path
-        path = null
+        resource = camelHttpPath
+        camelHttpPath = null
     }
     else {
-        resource = path.substring(0, slashPos)
-        path = path.substring(slashPos + 1)
+        resource = camelHttpPath.substring(0, slashPos)
+        camelHttpPath = camelHttpPath.substring(slashPos + 1)
     }
 
     RESOURCE.set(message, resource)
-    Header.CAMEL_HTTP_PATH.set(message, path)
+    Header.CAMEL_HTTP_PATH.set(message, camelHttpPath)
+
+    validateSettings(message, isPublicCall)
+
+    return message
 }
 
-static private void validateSettings(Message message) {
+static private void validateSettings(Message message, boolean isPublicCall) {
     RouteSettings settings = ROUTES[RESOURCE.get(message)]
 
-    if (settings == null || !isValid(message, Header.CAMEL_HTTP_PATH, settings.paths)) {
+    if (
+        settings == null ||
+        (isPublicCall && settings.rejectPublicCall) ||
+        !isValid(message, Header.CAMEL_HTTP_PATH, settings.paths))
+    {
         Http.setNotFoundResponse(message)
         return
     }
@@ -113,4 +122,5 @@ class RouteSettings {
     final List<String> methods
     final List<String> paths
     final List<String> query
+    final boolean rejectPublicCall
 }
