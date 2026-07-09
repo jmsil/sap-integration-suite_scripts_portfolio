@@ -21,12 +21,16 @@ static final private Map<String, RouteSettings> ROUTES = [
     'conversions-ftp': new RouteSettings(
         methods: ['POST']
     ),
-    'firebase-users-management-sync': new RouteSettings(
+    'google-firebase-auth-users': new RouteSettings(
         methods: ['POST', 'PATCH', 'DELETE'],
         rejectPublicCall: true
     ),
-    'firebase-users-management-async': new RouteSettings(
+    'google-firebase-auth-users-async': new RouteSettings(
         methods: ['POST', 'PATCH', 'DELETE'],
+        rejectPublicCall: true
+    ),
+    'google-firebase-auth-users-async-response': new RouteSettings(
+        methods: ['GET'],
         rejectPublicCall: true
     ),
     'inter-statement-oauth2-mtls': new RouteSettings(
